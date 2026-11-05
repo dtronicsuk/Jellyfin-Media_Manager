@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Media Manager Settings</title>
+</head>
+<body>
+<div id="mmSettingsPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-input,emby-button,emby-checkbox,emby-textarea">
+
+    <div data-role="content">
+        <div class="content-primary">
+            <h2>Media Manager settings</h2>
+
+            <form id="mmSettingsForm">
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="mmMaxSize">Maximum upload size (MB)</label>
+                    <input id="mmMaxSize" is="emby-input" type="number" min="0" step="1" />
+                    <div class="fieldDescription">0 means no limit.</div>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="mmExtensions">Allowed file extensions</label>
+                    <textarea id="mmExtensions" is="emby-textarea" rows="5" class="emby-textarea"></textarea>
+                    <div class="fieldDescription">Separate with commas or spaces. These apply to uploads and to renaming files. Executables and scripts should stay off this list.</div>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="mmAutoScan" is="emby-checkbox" type="checkbox" />
+                        <span>Queue a library scan after an upload batch finishes</span>
+                    </label>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="mmAllowDelete" is="emby-checkbox" type="checkbox" />
+                        <span>Allow deleting files and folders from the Media Manager page</span>
+                    </label>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="mmDebug" is="emby-checkbox" type="checkbox" />
+                        <span>Write every chunk and browse action to the Jellyfin log</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">Uploads, renames, moves and deletes are always logged. This adds the per-request detail.</div>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span>Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var PLUGIN_ID = 'b7f2d4a1-6c3e-4f85-9a10-3d5e8c7b2f64';
+            var page = document.querySelector('#mmSettingsPage');
+
+            page.addEventListener('pageshow', function () {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(PLUGIN_ID).then(function (c) {
+                    page.querySelector('#mmMaxSize').value = c.MaxUploadSizeMb || 0;
+                    page.querySelector('#mmExtensions').value = (c.AllowedExtensions || []).join(', ');
+                    page.querySelector('#mmAutoScan').checked = !!c.AutoScanAfterUpload;
+                    page.querySelector('#mmAllowDelete').checked = !!c.AllowDelete;
+                    page.querySelector('#mmDebug').checked = !!c.DebugLogging;
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            page.querySelector('#mmSettingsForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(PLUGIN_ID).then(function (c) {
+                    c.MaxUploadSizeMb = Math.max(0, parseInt(page.querySelector('#mmMaxSize').value, 10) || 0);
+                    c.AllowedExtensions = page.querySelector('#mmExtensions').value
+                        .split(/[\s,;]+/)
+                        .map(function (s) { return s.trim().toLowerCase(); })
+                        .filter(Boolean)
+                        .map(function (s) { return s.charAt(0) === '.' ? s : '.' + s; });
+                    c.AutoScanAfterUpload = page.querySelector('#mmAutoScan').checked;
+                    c.AllowDelete = page.querySelector('#mmAllowDelete').checked;
+                    c.DebugLogging = page.querySelector('#mmDebug').checked;
+                    ApiClient.updatePluginConfiguration(PLUGIN_ID, c).then(Dashboard.processPluginConfigurationUpdateResult);
+                });
+                return false;
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

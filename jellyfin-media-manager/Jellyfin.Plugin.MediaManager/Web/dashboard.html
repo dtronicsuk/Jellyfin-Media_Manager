@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Media Manager</title>
+</head>
+<body>
+<div id="mmPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button">
+
+    <style>
+        #mmPage { --mm-accent: #00a4dc; --mm-border: rgba(127,127,127,.28); --mm-fill: rgba(127,127,127,.10); }
+        #mmPage .mm-wrap { max-width: 1100px; margin: 0 auto; }
+        #mmPage h2 { margin: 0 0 .2em; }
+        #mmPage .mm-sub { opacity: .7; margin: 0 0 1.2em; }
+        #mmPage .mm-card { background: var(--mm-fill); border: 1px solid var(--mm-border); border-radius: 10px; padding: .9em 1em; margin-bottom: 1em; }
+        #mmPage .mm-toolbar { display: flex; flex-wrap: wrap; gap: .6em 1em; align-items: center; }
+        #mmPage .mm-crumbs { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
+        #mmPage .mm-crumbs a { color: var(--mm-accent); text-decoration: none; }
+        #mmPage .mm-crumbs a:hover { text-decoration: underline; }
+        #mmPage .mm-sep { opacity: .5; margin: 0 .35em; }
+        #mmPage .mm-actions { display: flex; flex-wrap: wrap; gap: .5em; }
+        #mmPage select.mm-select, #mmPage .mm-input { background: rgba(0,0,0,.35); color: inherit; border: 1px solid var(--mm-border); border-radius: 6px; padding: .5em .7em; font: inherit; max-width: 100%; }
+        #mmPage .mm-input { width: 100%; box-sizing: border-box; margin-top: .4em; }
+        #mmPage .mm-btn { background: var(--mm-fill); color: inherit; border: 1px solid var(--mm-border); border-radius: 6px; padding: .45em .9em; font: inherit; cursor: pointer; }
+        #mmPage .mm-btn:hover { border-color: var(--mm-accent); }
+        #mmPage .mm-btn[disabled] { opacity: .4; cursor: default; border-color: var(--mm-border); }
+        #mmPage .mm-primary { background: var(--mm-accent); border-color: var(--mm-accent); color: #fff; }
+        #mmPage .mm-danger { color: #ff6b6b; }
+        #mmPage .mm-status { padding: .7em 1em; border-radius: 8px; margin-bottom: 1em; border: 1px solid var(--mm-border); }
+        #mmPage .mm-status.error { border-color: #ff6b6b; background: rgba(255,107,107,.12); }
+        #mmPage .mm-status.ok { border-color: #4cc38a; background: rgba(76,195,138,.12); }
+        #mmPage .mm-drop { border: 2px dashed var(--mm-border); border-radius: 12px; padding: 1.6em 1em; text-align: center; margin-bottom: 1em; transition: border-color .15s, background .15s; }
+        #mmPage .mm-drop.over { border-color: var(--mm-accent); background: rgba(0,164,220,.10); }
+        #mmPage .mm-drop p { margin: 0 0 .7em; opacity: .85; }
+        #mmPage .mm-drop small { display: block; margin-top: .7em; opacity: .55; }
+        #mmPage .mm-job { display: grid; grid-template-columns: 1fr auto; gap: .2em .8em; padding: .55em 0; border-bottom: 1px solid var(--mm-border); }
+        #mmPage .mm-job:last-child { border-bottom: 0; }
+        #mmPage .mm-job-name { overflow-wrap: anywhere; }
+        #mmPage .mm-job-meta { opacity: .65; font-size: .9em; }
+        #mmPage .mm-job-meta.error { color: #ff6b6b; opacity: 1; }
+        #mmPage .mm-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(127,127,127,.25); overflow: hidden; }
+        #mmPage .mm-bar > div { height: 100%; width: 0; background: var(--mm-accent); transition: width .15s; }
+        #mmPage .mm-bar.done > div { background: #4cc38a; }
+        #mmPage table.mm-table { width: 100%; border-collapse: collapse; }
+        #mmPage .mm-table th { text-align: left; font-weight: 600; opacity: .65; font-size: .85em; padding: .4em .5em; border-bottom: 1px solid var(--mm-border); }
+        #mmPage .mm-table td { padding: .5em; border-bottom: 1px solid rgba(127,127,127,.14); vertical-align: middle; }
+        #mmPage .mm-table tr:last-child td { border-bottom: 0; }
+        #mmPage .mm-name a { color: inherit; text-decoration: none; cursor: pointer; }
+        #mmPage .mm-name a.dir { color: var(--mm-accent); font-weight: 600; }
+        #mmPage .mm-name svg { width: 1.1em; height: 1.1em; vertical-align: -0.2em; margin-right: .5em; opacity: .8; }
+        #mmPage .mm-num { white-space: nowrap; opacity: .75; }
+        #mmPage .mm-row-actions { white-space: nowrap; text-align: right; }
+        #mmPage .mm-row-actions .mm-btn { padding: .25em .6em; font-size: .9em; margin-left: .25em; }
+        #mmPage .mm-tag { font-size: .75em; border: 1px solid #e0a63a; color: #e0a63a; border-radius: 4px; padding: 0 .4em; margin-left: .5em; }
+        #mmPage .mm-empty { text-align: center; opacity: .6; padding: 1.5em 0; }
+        #mmPage dialog { background: #202124; color: #eee; border: 1px solid var(--mm-border); border-radius: 12px; padding: 1.2em 1.4em; width: min(480px, 92vw); }
+        #mmPage dialog::backdrop { background: rgba(0,0,0,.6); }
+        #mmPage .mm-dlg h3 { margin: 0 0 .8em; }
+        #mmPage .mm-dlg label { display: block; }
+        #mmPage .mm-dlg-buttons { display: flex; justify-content: flex-end; gap: .6em; margin-top: 1.1em; }
+        #mmPage .mm-pick-path { opacity: .7; font-size: .9em; overflow-wrap: anywhere; margin-bottom: .5em; }
+        #mmPage .mm-pick-list { max-height: 260px; overflow: auto; border: 1px solid var(--mm-border); border-radius: 8px; }
+        #mmPage .mm-pick-list div { padding: .5em .8em; cursor: pointer; border-bottom: 1px solid rgba(127,127,127,.14); }
+        #mmPage .mm-pick-list div:hover { background: rgba(0,164,220,.15); }
+        #mmPage .mm-pick-list div:last-child { border-bottom: 0; }
+        @media (max-width: 700px) { #mmPage .mm-hide-sm { display: none; } }
+    </style>
+
+    <div data-role="content">
+        <div class="content-primary mm-wrap">
+
+            <h2>Media Manager</h2>
+            <p class="mm-sub">Upload files and manage folders inside your library locations. Changes happen directly on the server's disk.</p>
+
+            <div id="mmStatus" class="mm-status" hidden></div>
+
+            <div class="mm-card mm-toolbar">
+                <select id="mmLibrary" class="mm-select" title="Library folder"></select>
+                <div id="mmCrumbs" class="mm-crumbs"></div>
+                <div class="mm-actions">
+                    <button type="button" class="mm-btn" id="mmUp">Up</button>
+                    <button type="button" class="mm-btn" id="mmRefresh">Refresh</button>
+                    <button type="button" class="mm-btn" id="mmNewFolder">New folder</button>
+                    <button type="button" class="mm-btn" id="mmScan">Scan libraries</button>
+                </div>
+            </div>
+
+            <div id="mmDrop" class="mm-drop">
+                <p>Drag files here to upload them into the folder shown above</p>
+                <button type="button" class="mm-btn mm-primary" id="mmChoose">Choose files</button>
+                <input type="file" id="mmFile" multiple hidden>
+                <small id="mmLimits"></small>
+            </div>
+
+            <div id="mmQueueCard" class="mm-card" hidden>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4em;">
+                    <strong>Uploads</strong>
+                    <button type="button" class="mm-btn" id="mmClearDone">Clear finished</button>
+                </div>
+                <div id="mmQueue"></div>
+            </div>
+
+            <div class="mm-card">
+                <table class="mm-table">
+                    <thead>
+                        <tr><th>Name</th><th class="mm-hide-sm">Size</th><th class="mm-hide-sm">Modified</th><th></th></tr>
+                    </thead>
+                    <tbody id="mmRows"></tbody>
+                </table>
+                <div id="mmEmpty" class="mm-empty" hidden>This folder is empty.</div>
+            </div>
+
+        </div>
+    </div>
+
+    <dialog id="mmDialog"></dialog>
+
+    <script type="text/javascript">
+        (function () {
+            'use strict';
+
+            var page = document.querySelector('#mmPage');
+            var CHUNK = 8 * 1024 * 1024;
+            var state = {
+                libs: [],
+                settings: { allowedExtensions: [], allowDelete: true, autoScan: true, maxUploadSizeMb: 0, partialSuffix: '.mmpart' },
+                root: null, path: null, parent: null, entries: [],
+                queue: [], running: false, nextId: 1
+            };
+
+            function $(sel) { return page.querySelector(sel); }
+            function log() { var a = ['[MediaManager]'].concat([].slice.call(arguments)); console.log.apply(console, a); }
+
+            // ---------------------------------------------------------- helpers
+            function esc(s) {
+                return String(s).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+            function fmtSize(n) {
+                if (n === null || n === undefined) { return ''; }
+                var u = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
+                while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+                return (i === 0 ? n : n.toFixed(n >= 100 ? 0 : 1)) + ' ' + u[i];
+            }
+            function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return ''; } }
+            function sepOf(p) { return (p.indexOf('\\') >= 0 && p.indexOf('/') < 0) ? '\\' : '/'; }
+            function join(a, b) { return a.replace(/[\\/]+$/, '') + sepOf(a) + b; }
+            function lastSeg(p) { var parts = p.split(/[\\/]+/).filter(Boolean); return parts.length ? parts[parts.length - 1] : p; }
+            function qs(o) {
+                return Object.keys(o).filter(function (k) { return o[k] !== undefined && o[k] !== null; })
+                    .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(o[k]); }).join('&');
+            }
+            function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+            function authHeader() { return 'MediaBrowser Token="' + ApiClient.accessToken() + '"'; }
+
+            var statusTimer;
+            function say(msg, kind) {
+                var el = $('#mmStatus');
+                el.textContent = msg;
+                el.className = 'mm-status ' + (kind || 'info');
+                el.hidden = false;
+                clearTimeout(statusTimer);
+                if (kind !== 'error') { statusTimer = setTimeout(function () { el.hidden = true; }, 6000); }
+                log(kind || 'info', msg);
+            }
+            function showErr(e) { say((e && e.message) ? e.message : String(e), 'error'); }
+
+            // -------------------------------------------------------------- api
+            function api(method, path, query, body) {
+                var u = ApiClient.getUrl('MediaManager/' + path) + (query ? '?' + qs(query) : '');
+                var opts = { method: method, headers: { 'Authorization': authHeader() } };
+                if (body !== undefined) {
+                    opts.headers['Content-Type'] = 'application/json';
+                    opts.body = JSON.stringify(body);
+                }
+                log(method, path, query || '');
+                return fetch(u, opts).then(function (r) {
+                    return r.text().then(function (t) {
+                        var data = null;
+                        try { data = t ? JSON.parse(t) : null; } catch (e) { data = { error: t }; }
+                        if (!r.ok) {
+                            var err = new Error((data && data.error) || ('Server returned HTTP ' + r.status));
+                            err.status = r.status;
+                            err.data = data;
+                            throw err;
+                        }
+                        return data;
+                    });
+                });
+            }
+
+            // ----------------------------------------------------------- dialogs
+            var dlg = $('#mmDialog');
+            function openDialog(html, ready) {
+                dlg.innerHTML = html;
+                if (!dlg.open) { dlg.showModal(); }
+                if (ready) { ready(); }
+            }
+            function closeDialog() { dlg.onclose = null; if (dlg.open) { dlg.close(); } }
+
+            function askText(title, label, value, okLabel) {
+                return new Promise(function (resolve) {
+                    openDialog(
+                        '<form method="dialog" class="mm-dlg"><h3>' + esc(title) + '</h3>' +
+                        '<label>' + esc(label) + '<input id="mmDlgInput" class="mm-input" type="text" autocomplete="off"></label>' +
+                        '<div class="mm-dlg-buttons"><button type="button" class="mm-btn" data-act="cancel">Cancel</button>' +
+                        '<button type="submit" class="mm-btn mm-primary">' + esc(okLabel || 'OK') + '</button></div></form>',
+                        function () {
+                            var input = dlg.querySelector('#mmDlgInput');
+                            input.value = value || '';
+                            input.focus();
+                            input.select();
+                            dlg.querySelector('[data-act=cancel]').onclick = function () { closeDialog(); resolve(null); };
+                            dlg.querySelector('form').onsubmit = function (e) {
+                                e.preventDefault();
+                                var v = input.value.trim();
+                                closeDialog();
+                                resolve(v || null);
+                            };
+                            dlg.onclose = function () { resolve(null); };
+                        });
+                });
+            }
+
+            function askConfirm(title, message, okLabel, danger) {
+                return new Promise(function (resolve) {
+                    openDialog(
+                        '<div class="mm-dlg"><h3>' + esc(title) + '</h3><div>' + esc(message) + '</div>' +
+                        '<div class="mm-dlg-buttons"><button type="button" class="mm-btn" data-act="cancel">Cancel</button>' +
+                        '<button type="button" class="mm-btn ' + (danger ? 'mm-danger' : 'mm-primary') + '" data-act="ok">' + esc(okLabel || 'OK') + '</button></div></div>',
+                        function () {
+                            dlg.querySelector('[data-act=cancel]').onclick = function () { closeDialog(); resolve(false); };
+                            dlg.querySelector('[data-act=ok]').onclick = function () { closeDialog(); resolve(true); };
+                            dlg.onclose = function () { resolve(false); };
+                        });
+                });
+            }
+
+            function pickFolder(startPath, excludePath) {
+                return new Promise(function (resolve) {
+                    var cur = startPath;
+                    function finish(v) { closeDialog(); resolve(v); }
+                    function blocked(p) {
+                        if (!excludePath) { return false; }
+                        return p === excludePath;
+                    }
+                    function load(p) {
+                        api('GET', 'Browse', { path: p }).then(function (d) {
+                            cur = d.path;
+                            dlg.querySelector('#mmPickPath').textContent = d.path;
+                            var html = '';
+                            if (d.parent) {
+                                html += '<div data-path="' + esc(d.parent) + '">&#8593; Up one level</div>';
+                            } else {
+                                state.libs.forEach(function (l) {
+                                    l.locations.forEach(function (loc) {
+                                        if (loc !== d.root) { html += '<div data-path="' + esc(loc) + '">&#8644; ' + esc(l.name) + ' &mdash; ' + esc(loc) + '</div>'; }
+                                    });
+                                });
+                            }
+                            d.entries.filter(function (e) { return e.isDirectory; }).forEach(function (e) {
+                                var full = join(d.path, e.name);
+                                if (!blocked(full)) { html += '<div data-path="' + esc(full) + '">&#128193; ' + esc(e.name) + '</div>'; }
+                            });
+                            var list = dlg.querySelector('#mmPickList');
+                            list.innerHTML = html || '<div style="cursor:default;opacity:.6">No subfolders</div>';
+                        }).catch(function (e) { showErr(e); });
+                    }
+                    openDialog(
+                        '<div class="mm-dlg"><h3>Move to&hellip;</h3><div id="mmPickPath" class="mm-pick-path"></div>' +
+                        '<div id="mmPickList" class="mm-pick-list"></div>' +
+                        '<div class="mm-dlg-buttons"><button type="button" class="mm-btn" data-act="cancel">Cancel</button>' +
+                        '<button type="button" class="mm-btn mm-primary" data-act="ok">Move here</button></div></div>',
+                        function () {
+                            dlg.querySelector('[data-act=cancel]').onclick = function () { finish(null); };
+                            dlg.querySelector('[data-act=ok]').onclick = function () { finish(cur); };
+                            dlg.querySelector('#mmPickList').onclick = function (ev) {
+                                var t = ev.target.closest('[data-path]');
+                                if (t) { load(t.getAttribute('data-path')); }
+                            };
+                            dlg.onclose = function () { resolve(null); };
+                            load(cur);
+                        });
+                });
+            }
+
+            // ----------------------------------------------------------- browser
+            var ICON_DIR = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>';
+            var ICON_FILE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>';
+
+            function renderLibrarySelect() {
+                var sel = $('#mmLibrary');
+                var html = '';
+                state.libs.forEach(function (l) {
+                    l.locations.forEach(function (loc) {
+                        html += '<option value="' + esc(loc) + '">' + esc(l.name) + ' — ' + esc(loc) + '</option>';
+                    });
+                });
+                sel.innerHTML = html;
+            }
+
+            function renderLimits() {
+                var s = state.settings, parts = [];
+                parts.push('Allowed: ' + (s.allowedExtensions || []).join(' '));
+                parts.push(s.maxUploadSizeMb > 0 ? 'Max file size ' + s.maxUploadSizeMb + ' MB' : 'No file size limit');
+                $('#mmLimits').textContent = parts.join('  ·  ');
+            }
+
+            function renderCrumbs() {
+                if (!state.path) { $('#mmCrumbs').innerHTML = ''; return; }
+                var rel = state.path.substring(state.root.length).replace(/^[\\/]+/, '');
+                var parts = rel ? rel.split(/[\\/]+/) : [];
+                var html = '<a href="#" data-path="' + esc(state.root) + '">' + esc(lastSeg(state.root)) + '</a>';
+                var acc = state.root;
+                parts.forEach(function (p) {
+                    acc = join(acc, p);
+                    html += '<span class="mm-sep">/</span><a href="#" data-path="' + esc(acc) + '">' + esc(p) + '</a>';
+                });
+                $('#mmCrumbs').innerHTML = html;
+            }
+
+            function renderRows() {
+                var html = '';
+                state.entries.forEach(function (e) {
+                    html += '<tr data-name="' + esc(e.name) + '" data-dir="' + (e.isDirectory ? '1' : '0') + '">';
+                    html += '<td class="mm-name"><a class="' + (e.isDirectory ? 'dir' : '') + '" data-act="' + (e.isDirectory ? 'open' : 'none') + '">' +
+                        (e.isDirectory ? ICON_DIR : ICON_FILE) + esc(e.name) + '</a>' +
+                        (e.partial ? '<span class="mm-tag" title="An upload that did not finish">unfinished</span>' : '') + '</td>';
+                    html += '<td class="mm-num mm-hide-sm">' + fmtSize(e.size) + '</td>';
+                    html += '<td class="mm-num mm-hide-sm">' + esc(fmtDate(e.modified)) + '</td>';
+                    html += '<td class="mm-row-actions">' +
+                        '<button type="button" class="mm-btn" data-act="rename">Rename</button>' +
+                        '<button type="button" class="mm-btn" data-act="move">Move</button>' +
+                        (state.settings.allowDelete ? '<button type="button" class="mm-btn mm-danger" data-act="delete">Delete</button>' : '') +
+                        '</td></tr>';
+                });
+                $('#mmRows').innerHTML = html;
+                $('#mmEmpty').hidden = state.entries.length > 0;
+                $('#mmUp').disabled = !state.parent;
+            }
+
+            function loadDir(path) {
+                return api('GET', 'Browse', { path: path }).then(function (d) {
+                    state.path = d.path;
+                    state.root = d.root;
+                    state.parent = d.parent;
+                    state.entries = d.entries;
+                    var sel = $('#mmLibrary');
+                    if (sel.querySelector('option[value="' + CSS.escape(d.root) + '"]')) { sel.value = d.root; }
+                    renderCrumbs();
+                    renderRows();
+                }).catch(showErr);
+            }
+
+            function rowName(target) {
+                var tr = target.closest('tr[data-name]');
+                return tr ? { name: tr.getAttribute('data-name'), dir: tr.getAttribute('data-dir') === '1' } : null;
+            }
+
+            function onRowClick(ev) {
+                var btn = ev.target.closest('[data-act]');
+                var row = rowName(ev.target);
+                if (!btn || !row) { return; }
+                var act = btn.getAttribute('data-act');
+                var full = join(state.path, row.name);
+
+                if (act === 'open') {
+                    loadDir(full);
+                } else if (act === 'rename') {
+                    askText('Rename', 'New name for "' + row.name + '"', row.name, 'Rename').then(function (nn) {
+                        if (!nn || nn === row.name) { return; }
+                        api('POST', 'Rename', null, { path: full, newName: nn })
+                            .then(function () { say('Renamed to ' + nn, 'ok'); return loadDir(state.path); })
+                            .catch(showErr);
+                    });
+                } else if (act === 'move') {
+                    pickFolder(state.path, row.dir ? full : null).then(function (dest) {
+                        if (!dest || dest === state.path) { return; }
+                        api('POST', 'Move', null, { path: full, destination: dest })
+                            .then(function () { say('Moved ' + row.name, 'ok'); return loadDir(state.path); })
+                            .catch(showErr);
+                    });
+                } else if (act === 'delete') {
+                    var msg = row.dir
+                        ? 'Delete the folder "' + row.name + '" and everything inside it? This cannot be undone.'
+                        : 'Delete "' + row.name + '"? This cannot be undone.';
+                    askConfirm('Delete', msg, 'Delete', true).then(function (yes) {
+                        if (!yes) { return; }
+                        api('POST', 'Delete', null, { path: full, recursive: row.dir })
+                            .then(function () { say('Deleted ' + row.name, 'ok'); return loadDir(state.path); })
+                            .catch(showErr);
+                    });
+                }
+            }
+
+            // ----------------------------------------------------------- uploads
+            function checkFile(f) {
+                var s = state.settings;
+                if (f.size === 0) { return 'Empty files (or whole folders) cannot be uploaded.'; }
+                var dot = f.name.lastIndexOf('.');
+                var ext = dot >= 0 ? f.name.substring(dot).toLowerCase() : '';
+                var allowed = (s.allowedExtensions || []).map(function (a) {
+                    a = a.trim().toLowerCase();
+                    return a.charAt(0) === '.' ? a : '.' + a;
+                });
+                if (!ext || allowed.indexOf(ext) < 0) { return 'File type ' + (ext || '(none)') + ' is not on the allowed list.'; }
+                if (s.maxUploadSizeMb > 0 && f.size > s.maxUploadSizeMb * 1024 * 1024) { return 'Larger than the ' + s.maxUploadSizeMb + ' MB limit.'; }
+                return null;
+            }
+
+            function addFiles(list) {
+                if (!state.path) { say('Pick a library folder first.', 'error'); return; }
+                Array.prototype.forEach.call(list, function (f) {
+                    var job = { id: state.nextId++, file: f, dir: state.path, status: 'queued', sent: 0, error: null, cancelled: false, xhr: null };
+                    var problem = checkFile(f);
+                    if (problem) { job.status = 'error'; job.error = problem; }
+                    state.queue.push(job);
+                });
+                renderQueue();
+                pump();
+            }
+
+            function renderQueue() {
+                $('#mmQueueCard').hidden = state.queue.length === 0;
+                var html = '';
+                state.queue.forEach(function (j) {
+                    var pct = j.status === 'done' ? 100 : Math.min(100, Math.round(j.sent / j.file.size * 100));
+                    var meta;
+                    if (j.status === 'error') { meta = '<span class="mm-job-meta error">' + esc(j.error) + '</span>'; }
+                    else if (j.status === 'done') { meta = '<span class="mm-job-meta">Uploaded</span>'; }
+                    else if (j.status === 'cancelled') { meta = '<span class="mm-job-meta">Cancelled</span>'; }
+                    else if (j.status === 'queued') { meta = '<span class="mm-job-meta">Waiting</span>'; }
+                    else { meta = '<span class="mm-job-meta">' + pct + '% &middot; ' + fmtSize(j.sent) + ' of ' + fmtSize(j.file.size) + '</span>'; }
+                    var canCancel = j.status === 'queued' || j.status === 'uploading';
+                    html += '<div class="mm-job" data-job="' + j.id + '">' +
+                        '<div><div class="mm-job-name">' + esc(j.file.name) + '</div>' + meta + '</div>' +
+                        '<div>' + (canCancel ? '<button type="button" class="mm-btn" data-act="cancel">Cancel</button>' : '') + '</div>' +
+                        '<div class="mm-bar ' + (j.status === 'done' ? 'done' : '') + '"><div style="width:' + pct + '%"></div></div></div>';
+                });
+                $('#mmQueue').innerHTML = html;
+            }
+
+            function xhrChunk(job, blob, offset, overwrite) {
+                return new Promise(function (resolve, reject) {
+                    var xhr = new XMLHttpRequest();
+                    job.xhr = xhr;
+                    xhr.open('POST', ApiClient.getUrl('MediaManager/Upload') + '?' + qs({
+                        path: job.dir, name: job.file.name, offset: offset, total: job.file.size, overwrite: overwrite
+                    }));
+                    xhr.setRequestHeader('Authorization', authHeader());
+                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                    xhr.upload.onprogress = function (e) {
+                        if (e.lengthComputable) { job.sent = offset + e.loaded; renderQueue(); }
+                    };
+                    xhr.onload = function () {
+                        var d = null;
+                        try { d = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
+                        resolve({ status: xhr.status, data: d });
+                    };
+                    xhr.onerror = function () { reject(new Error('Network error while uploading')); };
+                    xhr.onabort = function () { reject(new Error('Cancelled')); };
+                    xhr.send(blob);
+                });
+            }
+
+            function uploadJob(job) {
+                var offset = 0, overwrite = false, retries = 0;
+                function step() {
+                    if (offset >= job.file.size) { return Promise.resolve(); }
+                    if (job.cancelled) { return Promise.reject(new Error('Cancelled')); }
+                    var blob = job.file.slice(offset, Math.min(offset + CHUNK, job.file.size));
+                    return xhrChunk(job, blob, offset, overwrite).then(function (r) {
+                        var d = r.data;
+                        if (r.status === 200 && d) {
+                            if (d.received <= offset) {
+                                if (++retries > 3) { throw new Error('The server is not accepting data for this file.'); }
+                            } else { retries = 0; }
+                            offset = d.received;
+                            job.sent = offset;
+                            renderQueue();
+                            if (d.complete) { return null; }
+                            return step();
+                        }
+                        if (r.status === 409 && d && d.code === 'exists') {
+                            return askConfirm('File exists', '"' + job.file.name + '" already exists in that folder. Replace it?', 'Replace', true).then(function (yes) {
+                                if (!yes) { throw new Error('Skipped: file already exists.'); }
+                                overwrite = true;
+                                return step();
+                            });
+                        }
+                        if (r.status === 409 && d && typeof d.expected === 'number') {
+                            if (++retries > 3) { throw new Error(d.error || 'Upload got out of step with the server.'); }
+                            offset = d.expected;
+                            return step();
+                        }
+                        throw new Error((d && d.error) || ('Server returned HTTP ' + r.status));
+                    }, function (err) {
+                        if (job.cancelled) { throw err; }
+                        if (++retries > 3) { throw err; }
+                        log('chunk failed, retrying', retries, err.message);
+                        return sleep(1000 * retries).then(step);
+                    });
+                }
+                return step();
+            }
+
+            function pump() {
+                if (state.running) { return; }
+                state.running = true;
+                var uploaded = 0;
+                function next() {
+                    var job = state.queue.filter(function (j) { return j.status === 'queued'; })[0];
+                    if (!job) { return Promise.resolve(); }
+                    job.status = 'uploading';
+                    renderQueue();
+                    return uploadJob(job).then(function () {
+                        job.status = 'done';
+                        uploaded++;
+                    }, function (e) {
+                        job.status = job.cancelled ? 'cancelled' : 'error';
+                        job.error = e.message;
+                        // remove the unfinished piece on the server; failure here is harmless
+                        return api('DELETE', 'Upload', { path: job.dir, name: job.file.name }).catch(function () { });
+                    }).then(function () { renderQueue(); return next(); });
+                }
+                next().then(function () {
+                    state.running = false;
+                    var chain = Promise.resolve();
+                    if (uploaded && state.settings.autoScan) {
+                        chain = api('POST', 'Scan').then(function () {
+                            say(uploaded + ' file(s) uploaded. Library scan queued.', 'ok');
+                        }).catch(showErr);
+                    } else if (uploaded) {
+                        say(uploaded + ' file(s) uploaded.', 'ok');
+                    }
+                    return chain.then(function () { return loadDir(state.path); });
+                });
+            }
+
+            // ------------------------------------------------------------- wiring
+            function wire() {
+                $('#mmLibrary').addEventListener('change', function (e) { loadDir(e.target.value); });
+                $('#mmCrumbs').addEventListener('click', function (e) {
+                    var a = e.target.closest('a[data-path]');
+                    if (a) { e.preventDefault(); loadDir(a.getAttribute('data-path')); }
+                });
+                $('#mmUp').addEventListener('click', function () { if (state.parent) { loadDir(state.parent); } });
+                $('#mmRefresh').addEventListener('click', function () { if (state.path) { loadDir(state.path); } });
+                $('#mmNewFolder').addEventListener('click', function () {
+                    if (!state.path) { return; }
+                    askText('New folder', 'Folder name', '', 'Create').then(function (name) {
+                        if (!name) { return; }
+                        api('POST', 'Folder', null, { path: state.path, name: name })
+                            .then(function () { say('Created folder ' + name, 'ok'); return loadDir(state.path); })
+                            .catch(showErr);
+                    });
+                });
+                $('#mmScan').addEventListener('click', function () {
+                    api('POST', 'Scan').then(function () { say('Library scan queued. New items appear when it finishes.', 'ok'); }).catch(showErr);
+                });
+                $('#mmRows').addEventListener('click', onRowClick);
+
+                var drop = $('#mmDrop'), input = $('#mmFile');
+                $('#mmChoose').addEventListener('click', function () { input.click(); });
+                input.addEventListener('change', function () { if (input.files.length) { addFiles(input.files); } input.value = ''; });
+                ['dragenter', 'dragover'].forEach(function (n) {
+                    drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); });
+                });
+                ['dragleave', 'drop'].forEach(function (n) {
+                    drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+                });
+                drop.addEventListener('drop', function (e) {
+                    if (e.dataTransfer && e.dataTransfer.files.length) { addFiles(e.dataTransfer.files); }
+                });
+
+                $('#mmQueue').addEventListener('click', function (e) {
+                    var btn = e.target.closest('[data-act=cancel]');
+                    var el = e.target.closest('[data-job]');
+                    if (!btn || !el) { return; }
+                    var id = parseInt(el.getAttribute('data-job'), 10);
+                    var job = state.queue.filter(function (j) { return j.id === id; })[0];
+                    if (!job) { return; }
+                    job.cancelled = true;
+                    if (job.status === 'queued') { job.status = 'cancelled'; renderQueue(); }
+                    else if (job.xhr) { job.xhr.abort(); }
+                });
+                $('#mmClearDone').addEventListener('click', function () {
+                    state.queue = state.queue.filter(function (j) { return j.status === 'queued' || j.status === 'uploading'; });
+                    renderQueue();
+                });
+
+                window.addEventListener('beforeunload', function (e) {
+                    if (state.running) { e.preventDefault(); e.returnValue = ''; }
+                });
+            }
+
+            function init() {
+                api('GET', 'Info').then(function (info) {
+                    state.libs = info.libraries;
+                    state.settings = info.settings;
+                    renderLibrarySelect();
+                    renderLimits();
+                    var first = null;
+                    state.libs.some(function (l) { if (l.locations.length) { first = l.locations[0]; return true; } return false; });
+                    if (!first) {
+                        say('No library folders were found. Add a library under Dashboard → Libraries first.', 'error');
+                        return;
+                    }
+                    return loadDir(state.path || first);
+                }).catch(showErr);
+            }
+
+            wire();
+            page.addEventListener('pageshow', init);
+        })();
+    </script>
+</div>
+</body>
+</html>

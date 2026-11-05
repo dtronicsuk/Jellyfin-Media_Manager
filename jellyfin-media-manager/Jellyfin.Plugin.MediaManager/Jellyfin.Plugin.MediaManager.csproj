@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>Jellyfin.Plugin.MediaManager</RootNamespace>
+    <AssemblyName>Jellyfin.Plugin.MediaManager</AssemblyName>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Built against the first 10.11 release so it loads on any 10.11.x server (targetAbi 10.11.0.0). -->
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Web\*" />
+    <EmbeddedResource Include="Web\*" />
+  </ItemGroup>
+
+</Project>
